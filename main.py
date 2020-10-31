@@ -189,4 +189,93 @@ def plot_stats(feature,label_rotation = False,horizontal_layout = True):
 
     plt.show()
 
+#%%
 plot_stats('NAME_CONTRACT_TYPE')
+plot_stats('CODE_GENDER')
+plot_stats('FLAG_OWN_CAR')
+plot_stats('FLAG_OWN_REALTY')
+plot_stats('NAME_FAMILY_STATUS',True,True)
+plot_stats('CNT_CHILDREN')
+plot_stats('CNT_FAM_MEMBERS',True)
+plot_stats('NAME_INCOME_TYPE',False,False)
+plot_stats('OCCUPATION_TYPE',True, False)
+plot_stats('NAME_EDUCATION_TYPE',True)
+plot_stats('ORGANIZATION_TYPE',True, False)
+
+#%%
+plt.figure(figsize=(12,5))
+plt.title("Распределение AMT_CREDIT")
+ax = sns.distplot(app_train["AMT_CREDIT"])
+plt.show()
+
+#%%
+plt.figure(figsize=(12,5))
+# KDE займов, выплаченных вовремя
+sns.kdeplot(app_train.loc[app_train['TARGET'] == 0, 'AMT_CREDIT'], label = 'target == 0')
+# KDE проблемных займов
+sns.kdeplot(app_train.loc[app_train['TARGET'] == 1, 'AMT_CREDIT'], label = 'target == 1')
+# Обозначения
+plt.xlabel('Сумма кредитования'); plt.ylabel('Плотность'); plt.title('Суммы кредитования');
+
+plt.show()
+
+#%%
+plt.figure(figsize=(12,5))
+plt.title("Распределение REGION_POPULATION_RELATIVE")
+ax = sns.distplot(app_train["REGION_POPULATION_RELATIVE"])
+plt.show()
+
+#%%
+plt.figure(figsize=(12,5))
+# KDE займов, выплаченных вовремя
+sns.kdeplot(app_train.loc[app_train['TARGET'] == 0, 'REGION_POPULATION_RELATIVE'], label = 'target == 0')
+# KDE проблемных займов
+sns.kdeplot(app_train.loc[app_train['TARGET'] == 1, 'REGION_POPULATION_RELATIVE'], label = 'target == 1')
+# Обозначения
+plt.xlabel('Плотность'); plt.ylabel('Плотность населения'); plt.title('Плотность населения');
+
+plt.show()
+
+#%%
+
+# создадим новый датафрейм для полиномиальных признаков
+poly_features = app_train[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH', 'TARGET']]
+poly_features_test = app_test[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
+# обработаем отуствующие данные
+from sklearn.impute import SimpleImputer
+
+imputer = SimpleImputer(strategy='median')
+poly_target = poly_features['TARGET']
+poly_features = poly_features.drop('TARGET', axis=1)
+poly_features = imputer.fit_transform(poly_features)
+poly_features_test = imputer.transform(poly_features_test)
+
+from sklearn.preprocessing import PolynomialFeatures
+
+# Создадим полиномиальный объект степени 3
+poly_transformer = PolynomialFeatures(degree=3)
+
+# Тренировка полиномиальных признаков
+poly_transformer.fit(poly_features)
+
+# Трансформация признаков
+poly_features = poly_transformer.transform(poly_features)
+poly_features_test = poly_transformer.transform(poly_features_test)
+
+print('Формат полиномиальных признаков: ', poly_features.shape)
+
+poly_transformer.get_feature_names(input_features = ['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH'])[:15]
+
+#%%
+
+# Датафрейм для новых фич
+poly_features = pd.DataFrame(poly_features,
+                             columns = poly_transformer.get_feature_names(['EXT_SOURCE_1', 'EXT_SOURCE_2',
+                                                                           'EXT_SOURCE_3', 'DAYS_BIRTH']))
+# Добавим таргет
+poly_features['TARGET'] = poly_target
+# рассчитаем корреляцию
+poly_corrs = poly_features.corr()['TARGET'].sort_values()
+# Отобразим признаки с наивысшей корреляцией
+print(poly_corrs.head(10))
+print(poly_corrs.tail(5))
